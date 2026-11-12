@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paper Trader</title>
+<style>
+:root{--bg:#f1f3ee;--card:#fff;--ink:#14213d;--mute:#5d6b82;--line:#d9ddd3;--acc:#2a5bd7;--gain:#1b7f5c;--loss:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#10151f;--card:#182030;--ink:#e8ecf4;--mute:#97a3ba;--line:#2a3550;--acc:#7da2ff;--gain:#4cc9a0;--loss:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:20px 16px 60px}
+h1,.big{font-family:Georgia,"Times New Roman",serif;font-weight:700}
+h1{font-size:22px;margin:0}
+h2{font-size:17px;margin:0 0 10px;font-family:Georgia,serif}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+nav{display:flex;gap:4px;margin:16px 0;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:none;color:var(--mute);padding:10px 14px;border-bottom:3px solid transparent;border-radius:0;font-weight:600}
+nav button.on{color:var(--ink);border-bottom-color:var(--acc)}
+button,input{font:inherit;color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:8px;padding:9px 14px}
+button{cursor:pointer}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+button.sell{border-color:var(--loss);color:var(--loss);font-weight:600}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
+.hero{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.big{font-size:44px;line-height:1.1}
+.mute{color:var(--mute)}.g{color:var(--gain)}.r{color:var(--loss)}
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin-top:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600;font-size:13px}
+th:first-child,td:first-child{text-align:left}
+#msg{min-height:24px;margin:6px 0;font-weight:600}
+.hide{display:none!important}
+#lock{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+#lock .card{max-width:340px;width:100%}
+input{width:100%}
+input.sm{width:110px}
+</style></head>
+<body>
+<div id="lock"><div class="card">
+<h1>Paper Trader</h1>
+<p class="mute">Enter your PIN to open your portfolio.</p>
+<div class="row"><input id="pin" type="password" placeholder="PIN" autocomplete="current-password" aria-label="PIN"><button class="pri" id="go">Open</button></div>
+<p id="lockmsg" class="r"></p>
+</div></div>
+
+<main>
+<header><h1>Paper Trader</h1><span class="mute">Practice with $10,000. Real prices, fake money.</span></header>
+<nav id="tabs">
+<button data-t="home" class="on">Overview</button><button data-t="market">Trade</button><button data-t="port">Holdings</button>
+<button data-t="watch">Watchlist</button><button data-t="hist">History</button><button data-t="board">Leaderboard</button>
+</nav>
+<div id="msg" role="status"></div>
+
+<section data-s="home">
+<div class="card">
+<div class="mute">Total value</div>
+<div class="hero"><div class="big" id="total">–</div><div id="ret" class="big" style="font-size:24px"></div></div>
+<div class="stats"><div><div class="mute">Cash</div><b id="cash">–</b></div><div><div class="mute">Started with</div><b>$10,000.00</b></div></div>
+</div>
+<div class="card"><h2>Value over time</h2><div id="chart"></div></div>
+<button id="reset">Reset game</button>
+</section>
+
+<section data-s="market" class="hide">
+<div class="card">
+<h2>Look up a stock</h2>
+<div class="row"><input id="sym" class="sm" placeholder="Ticker, e.g. AAPL" aria-label="Ticker"><button class="pri" id="find">Look up</button></div>
+<div id="qbox" class="hide" style="margin-top:14px">
+<div class="row"><b id="qs" style="font-size:20px"></b><span class="big" id="qp" style="font-size:28px"></span><span id="qd"></span></div>
+<div class="mute" id="qr"></div>
+<div class="row" style="margin-top:12px">
+<input id="sh" class="sm" type="number" min="1" step="1" value="1" aria-label="Shares">
+<button class="pri" id="buy">Buy</button><button class="sell" id="sell">Sell</button><button id="star">Add to watchlist</button>
+</div></div></div>
+</section>
+
+<section data-s="port" class="hide"><div class="card wrap">
+<table><thead><tr><th>Stock</th><th>Shares</th><th>Avg cost</th><th>Price</th><th>Value</th><th>Gain/loss</th><th>%</th><th></th></tr></thead><tbody id="hold"></tbody></table>
+</div></section>
+
+<section data-s="watch" class="hide"><div class="card wrap">
+<table><thead><tr><th>Stock</th><th>Price</th><th>Today</th><th></th></tr></thead><tbody id="wl"></tbody></table>
+</div></section>
+
+<section data-s="hist" class="hide"><div class="card wrap">
+<table><thead><tr><th>When</th><th>Type</th><th>Stock</th><th>Shares</th><th>Price</th><th>Total</th></tr></thead><tbody id="hs"></tbody></table>
+</div></section>
+
+<section data-s="board" class="hide"><div class="card">
+<h2>You vs the market</h2><p class="mute">Ranked by percentage return since you started. SPY tracks the S&amp;P 500.</p>
+<table><tbody id="bd"></tbody></table>
+</div></section>
+</main>
+
+<script>
+const API='https://n8n.blackforce.ca/webhook/api';
+const $=id=>document.getElementById(id);
+const usd=x=>(x<0?'-':'')+'$'+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pc=x=>`<span class="${x>=0?'g':'r'}">${x>=0?'+':''}${x.toFixed(2)}%</span>`;
+const none=(n,t)=>`<tr><td colspan="${n}" class="mute">${t}</td></tr>`;
+let pin=sessionStorage.getItem('pin')||'',cur='';
+
+async function call(action,extra={}){
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,pin,...extra})});
+  const d=await r.json();
+  if(!d.ok)throw new Error(d.error);
+  return d;
+}
+async function run(action,extra){
+  $('msg').textContent='Working…';
+  try{
+    const d=await call(action,extra);
+    if(d.quote)quote(d.quote);
+    draw(d.state);
+    $('lock').classList.add('hide');
+    $('msg').textContent=d.msg||'';
+  }catch(e){
+    $('msg').textContent=e.message;
+    if(/PIN/.test(e.message)){sessionStorage.removeItem('pin');$('lock').classList.remove('hide');$('lockmsg').textContent='Wrong PIN. Try again.';}
+  }
+}
+function quote(q){
+  cur=q.symbol;$('sym').value=q.symbol;$('qbox').classList.remove('hide');
+  $('qs').textContent=q.symbol;$('qp').textContent=usd(q.p);$('qd').innerHTML=pc(q.dp);
+  $('qr').textContent=`Today's range ${usd(q.l)} to ${usd(q.h)}`;
+  $('star').textContent=q.watched?'On your watchlist':'Add to watchlist';
+}
+function chart(a){
+  if(a.length<2){$('chart').innerHTML='<p class="mute">Your chart fills in after your second day of trading.</p>';return;}
+  const v=a.map(x=>x.v),lo=Math.min(...v),hi=Math.max(...v),w=600,h=130;
+  const pts=v.map((y,i)=>`${(i/(v.length-1)*w).toFixed(1)},${(h-8-(y-lo)/((hi-lo)||1)*(h-16)).toFixed(1)}`).join(' ');
+  $('chart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="Portfolio value over time"><polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+}
+function draw(s){
+  $('total').textContent=usd(s.total);$('ret').innerHTML=pc(s.ret);$('cash').textContent=usd(s.cash);
+  chart(s.snaps);
+  $('hold').innerHTML=s.holdings.map(h=>`<tr><td><b>${h.symbol}</b></td><td>${h.shares}</td><td>${usd(h.avg)}</td><td>${usd(h.price)}</td><td>${usd(h.value)}</td><td class="${h.pl>=0?'g':'r'}">${usd(h.pl)}</td><td>${pc(h.plPct)}</td><td><button onclick="pick('${h.symbol}')">Trade</button></td></tr>`).join('')||none(8,'You don\'t own any stocks yet. Open Trade to buy your first.');
+  $('wl').innerHTML=s.watch.map(w=>`<tr><td><b>${w.symbol}</b></td><td>${usd(w.p)}</td><td>${pc(w.dp)}</td><td><button onclick="pick('${w.symbol}')">Trade</button> <button onclick="run('watch_remove',{symbol:'${w.symbol}'})" aria-label="Remove ${w.symbol}">Remove</button></td></tr>`).join('')||none(4,'Nothing here yet. Look up a stock and add it.');
+  $('hs').innerHTML=s.trades.map(t=>`<tr><td>${new Date(t.t).toLocaleString()}</td><td class="${t.type==='BUY'?'g':'r'}">${t.type}</td><td>${t.symbol}</td><td>${t.shares}</td><td>${usd(t.price)}</td><td>${usd(t.total)}</td></tr>`).join('')||none(6,'No trades yet.');
+  $('bd').innerHTML=s.board.map((b,i)=>`<tr><td>${i+1}. ${b.name}</td><td>${pc(b.ret)}</td></tr>`).join('');
+}
+function tab(t){
+  document.querySelectorAll('[data-s]').forEach(e=>e.classList.toggle('hide',e.dataset.s!==t));
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+}
+function pick(s){tab('market');$('sym').value=s;run('quote',{symbol:s});}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+$('find').onclick=()=>run('quote',{symbol:$('sym').value});
+$('sym').onkeydown=e=>{if(e.key==='Enter')$('find').click();};
+const trade=a=>()=>run(a,{symbol:cur,shares:Number($('sh').value)});
+$('buy').onclick=trade('buy');$('sell').onclick=trade('sell');
+$('star').onclick=()=>run('watch_add',{symbol:cur}).then(()=>run('quote',{symbol:cur}));
+$('reset').onclick=()=>{if(confirm('Reset to $10,000 and erase all trades?'))run('reset');};
+$('go').onclick=()=>{pin=$('pin').value;sessionStorage.setItem('pin',pin);run('state');};
+$('pin').onkeydown=e=>{if(e.key==='Enter')$('go').click();};
+if(pin)run('state');
+</script>
+</body></html>
